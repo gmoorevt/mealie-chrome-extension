@@ -16,7 +16,20 @@ A Chrome extension that makes it quick and easy to import recipes from any websi
 
 ## Screenshots
 
-*Coming soon*
+### Import Popup
+The main popup interface showing recipe detection and import options:
+
+![Import Popup](screenshots/import-page.png)
+
+### Advanced Options
+Expand to manually select import method or access debug tools:
+
+![Advanced Options](screenshots/advanced-options.png)
+
+### Settings Page
+Configure your Mealie connection:
+
+![Settings](screenshots/Settings.png)
 
 ## Installation
 
