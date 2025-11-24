@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mealie Importer Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Mealie Recipe Importer</h1>
+      <p class="subtitle">Configure your Mealie connection</p>
+    </header>
+
+    <main>
+      <form id="settings-form">
+        <div class="form-group">
+          <label for="mealie-url">Mealie Instance URL</label>
+          <input
+            type="url"
+            id="mealie-url"
+            name="mealieUrl"
+            placeholder="https://cook.example.com"
+            required
+          >
+          <span class="help-text">The URL of your Mealie instance (no trailing slash)</span>
+        </div>
+
+        <div class="form-group">
+          <label for="api-token">API Token</label>
+          <div class="input-with-button">
+            <input
+              type="password"
+              id="api-token"
+              name="apiToken"
+              placeholder="Enter your Mealie API token"
+              required
+            >
+            <button type="button" id="toggle-token" class="btn-icon" title="Show/Hide token">
+              <span class="icon-eye">👁</span>
+            </button>
+          </div>
+          <span class="help-text">
+            Generate a token in Mealie: User Settings → API Tokens → Create
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="group-slug">Group Slug (optional)</label>
+          <input
+            type="text"
+            id="group-slug"
+            name="groupSlug"
+            placeholder="home"
+          >
+          <span class="help-text">Your Mealie group slug for direct recipe links</span>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="include-tags" name="includeTags">
+            <span>Include tags when importing by default</span>
+          </label>
+        </div>
+
+        <div class="button-group">
+          <button type="button" id="test-connection" class="btn btn-secondary">
+            Test Connection
+          </button>
+          <button type="submit" id="save-settings" class="btn btn-primary">
+            Save Settings
+          </button>
+        </div>
+      </form>
+
+      <div id="status-message" class="status-message hidden"></div>
+
+      <section class="info-section">
+        <h2>How to get your API Token</h2>
+        <ol>
+          <li>Log into your Mealie instance</li>
+          <li>Click on your user avatar → <strong>User Settings</strong></li>
+          <li>Scroll down to <strong>API Tokens</strong></li>
+          <li>Click <strong>Create</strong> and give your token a name</li>
+          <li>Copy the generated token and paste it above</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <p>Mealie Recipe Importer v1.0.0</p>
+    </footer>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

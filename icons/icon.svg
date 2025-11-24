@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#4CAF50"/>
+
+  <!-- Plate -->
+  <ellipse cx="64" cy="72" rx="40" ry="12" fill="#fff" opacity="0.9"/>
+  <ellipse cx="64" cy="70" rx="35" ry="10" fill="#E8F5E9"/>
+
+  <!-- Fork -->
+  <g fill="#fff">
+    <rect x="30" y="28" width="3" height="35" rx="1"/>
+    <rect x="36" y="28" width="3" height="35" rx="1"/>
+    <rect x="42" y="28" width="3" height="35" rx="1"/>
+    <rect x="28" y="58" width="19" height="6" rx="2"/>
+    <rect x="34" y="64" width="7" height="20" rx="2"/>
+  </g>
+
+  <!-- Knife -->
+  <g fill="#fff">
+    <path d="M88 28 C88 28 95 28 95 35 L95 60 L85 60 L85 35 C85 28 88 28 88 28"/>
+    <rect x="85" y="60" width="10" height="6" rx="2"/>
+    <rect x="87" y="66" width="6" height="18" rx="2"/>
+  </g>
+
+  <!-- Plus sign (import) -->
+  <circle cx="100" cy="100" r="20" fill="#2196F3"/>
+  <rect x="94" y="88" width="12" height="24" rx="2" fill="#fff"/>
+  <rect x="88" y="94" width="24" height="12" rx="2" fill="#fff"/>
+</svg>

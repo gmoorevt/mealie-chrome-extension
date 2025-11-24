@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mealie Import</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <img src="../icons/icon48.png" alt="Mealie" class="logo-icon">
+        <h1>Mealie</h1>
+      </div>
+    </header>
+
+    <main>
+      <!-- Current Page Info -->
+      <div class="current-page">
+        <span id="current-url" class="url" title="">Loading...</span>
+      </div>
+
+      <!-- Detection Status -->
+      <div id="detection-status" class="detection-status hidden">
+        <span class="detection-icon">✓</span>
+        <span class="detection-text">Recipe detected</span>
+      </div>
+
+      <!-- Primary Action -->
+      <div class="primary-action">
+        <button id="btn-import" class="btn btn-large btn-primary" disabled>
+          <span class="btn-icon">📥</span>
+          <span class="btn-text">Import Recipe</span>
+        </button>
+        <p id="method-hint" class="method-hint"></p>
+      </div>
+
+      <!-- Options Row -->
+      <div class="options-row">
+        <label class="checkbox-label">
+          <input type="checkbox" id="include-tags">
+          <span>Include tags</span>
+        </label>
+        <button id="btn-advanced-toggle" class="btn-text-link">
+          Advanced options
+        </button>
+      </div>
+
+      <!-- Advanced Options (Hidden by default) -->
+      <div id="advanced-options" class="advanced-options hidden">
+        <p class="advanced-label">Choose import method:</p>
+        <div class="method-buttons">
+          <button id="btn-method-auto" class="btn btn-method active" data-method="auto">
+            <span class="method-icon">🎯</span>
+            <span class="method-name">Auto</span>
+          </button>
+          <button id="btn-method-url" class="btn btn-method" data-method="url">
+            <span class="method-icon">🔗</span>
+            <span class="method-name">URL</span>
+          </button>
+          <button id="btn-method-jsonld" class="btn btn-method" data-method="jsonld">
+            <span class="method-icon">📋</span>
+            <span class="method-name">Schema</span>
+          </button>
+          <button id="btn-method-html" class="btn btn-method" data-method="html">
+            <span class="method-icon">📄</span>
+            <span class="method-name">HTML</span>
+          </button>
+        </div>
+        <p class="method-description" id="method-description">
+          Automatically choose the best method for this site.
+        </p>
+      </div>
+
+      <!-- Status Messages -->
+      <div id="status-area" class="status-area hidden">
+        <div id="status-message" class="status-message"></div>
+        <button id="recipe-link" class="recipe-link hidden">
+          View Recipe in Mealie →
+        </button>
+        <button id="btn-try-another" class="btn btn-small btn-secondary hidden">
+          Try different method
+        </button>
+      </div>
+    </main>
+
+    <footer>
+      <button id="btn-settings" class="btn-icon-link" title="Settings">
+        ⚙️
+      </button>
+      <span class="footer-divider">|</span>
+      <button id="btn-debug" class="btn-icon-link" title="Debug page">
+        🔍
+      </button>
+      <span class="footer-divider">|</span>
+      <button id="btn-debug-sections" class="btn-icon-link" title="Debug ATK sections">
+        📝
+      </button>
+    </footer>
+  </div>
+
+  <script src="../lib/mealie-api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
