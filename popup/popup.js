@@ -411,8 +411,26 @@ function extractJsonLdRecipe() {
         try {
           const additionalSections = extractAdditionalSections();
 
-          // Enhance the description with additional sections
+          // Add sections as recipe notes (Mealie uses notes array)
           if (additionalSections && additionalSections.length > 0) {
+            // Initialize notes array if not present
+            if (!recipe.notes) {
+              recipe.notes = [];
+            } else if (!Array.isArray(recipe.notes)) {
+              recipe.notes = [recipe.notes];
+            }
+
+            // Add each section as a note
+            additionalSections.forEach(section => {
+              if (section.content) {
+                recipe.notes.push({
+                  '@type': 'CreativeWork',
+                  'text': `**${section.title}**\n\n${section.content}`
+                });
+              }
+            });
+
+            // Also prepend to description for redundancy
             const originalDescription = recipe.description || '';
             const enhancedDescription = buildEnhancedDescription(originalDescription, additionalSections);
             recipe.description = enhancedDescription;
@@ -446,58 +464,79 @@ function extractAdditionalSections() {
       domain.includes('cooksillustrated.com') ||
       domain.includes('cookscountry.com')) {
 
-    // Try to find "Why This Recipe Works" section
-    const whyItWorksSelectors = [
-      '[data-testid="why-this-works"]',
-      '.why-this-recipe-works',
-      '[class*="WhyThisWorks"]',
-      '[class*="why-this-works"]',
-      'section[aria-label*="Why"]',
-      'h2:contains("Why This Recipe Works")',
-    ];
-
-    // Try various selectors for ATK sections
     let whySection = null;
     let beforeSection = null;
 
-    // Look for section headers and their content
+    // Method 1: Look for headers and get following content
     const allHeaders = document.querySelectorAll('h2, h3, h4, [role="heading"]');
     allHeaders.forEach(header => {
       const headerText = header.textContent.trim().toLowerCase();
 
-      if (headerText.includes('why this recipe works') || headerText.includes('why it works')) {
-        // Get the content following this header
+      if (!whySection && (headerText.includes('why this recipe works') || headerText.includes('why it works'))) {
         const content = getFollowingContent(header);
-        if (content) {
+        if (content && content.length > 20) {
           whySection = content;
         }
       }
 
-      if (headerText.includes('before you begin') || headerText.includes('getting started')) {
+      if (!beforeSection && (headerText.includes('before you begin') || headerText.includes('getting started'))) {
         const content = getFollowingContent(header);
-        if (content) {
+        if (content && content.length > 20) {
           beforeSection = content;
         }
       }
     });
 
-    // Also try to find by common ATK class patterns
-    if (!whySection) {
-      const whyElements = document.querySelectorAll('[class*="WhyThis"], [class*="why-this"], [data-testid*="why"]');
-      whyElements.forEach(el => {
-        const text = el.textContent.trim();
-        if (text.length > 50 && text.length < 5000) {
-          whySection = text;
+    // Method 2: ATK-specific class patterns (from debug analysis)
+    if (!beforeSection) {
+      // Look for the specific ATK class pattern: recipePrintBody_beforeYouBeginContent__*
+      const beforeElements = document.querySelectorAll(
+        '[class*="beforeYouBegin"], [class*="BeforeYouBegin"], [class*="before-you-begin"]'
+      );
+      beforeElements.forEach(el => {
+        if (!beforeSection) {
+          const text = el.textContent.trim();
+          if (text.length > 20 && text.length < 10000) {
+            beforeSection = text;
+          }
         }
       });
     }
 
-    if (!beforeSection) {
-      const beforeElements = document.querySelectorAll('[class*="BeforeYou"], [class*="before-you"], [data-testid*="before"]');
-      beforeElements.forEach(el => {
-        const text = el.textContent.trim();
-        if (text.length > 50 && text.length < 5000) {
-          beforeSection = text;
+    // Method 3: Generic class patterns for "why" sections
+    if (!whySection) {
+      const whyElements = document.querySelectorAll(
+        '[class*="WhyThis"], [class*="whyThis"], [class*="why-this"], [data-testid*="why"]'
+      );
+      whyElements.forEach(el => {
+        if (!whySection) {
+          const text = el.textContent.trim();
+          // Filter out the header text itself
+          const cleanText = text.replace(/why this recipe works/i, '').trim();
+          if (cleanText.length > 20 && cleanText.length < 10000) {
+            whySection = cleanText;
+          }
+        }
+      });
+    }
+
+    // Method 4: Look for recipe detail/body sections that might contain this info
+    if (!whySection || !beforeSection) {
+      const detailSections = document.querySelectorAll(
+        '[class*="recipeDetail"], [class*="recipe-detail"], [class*="RecipeBody"], [class*="recipe-body"]'
+      );
+      detailSections.forEach(section => {
+        const sectionText = section.textContent.toLowerCase();
+
+        if (!whySection && sectionText.includes('why this recipe works')) {
+          // Try to extract just that portion
+          const paragraphs = section.querySelectorAll('p');
+          paragraphs.forEach(p => {
+            const pText = p.textContent.trim();
+            if (!whySection && pText.length > 50 && !pText.toLowerCase().startsWith('before')) {
+              whySection = pText;
+            }
+          });
         }
       });
     }
