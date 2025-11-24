@@ -352,7 +352,7 @@ async function importViaUrl(includeTags) {
  * Import via JSON-LD extraction
  */
 async function importViaJsonLd() {
-  // Extract JSON-LD from page
+  // Extract JSON-LD and additional sections from page
   const results = await chrome.scripting.executeScript({
     target: { tabId: currentTabId },
     func: extractJsonLdRecipe
@@ -363,8 +363,24 @@ async function importViaJsonLd() {
     throw new Error('No recipe data found on this page');
   }
 
+  // Import the recipe first (without notes - Mealie ignores them in JSON-LD)
   const result = await mealieApi.importFromJson(extraction.recipe);
   const slug = typeof result === 'string' ? result.replace(/"/g, '') : result.slug || result;
+
+  // If we extracted additional sections, add them as notes via PATCH
+  if (extraction.additionalSections && extraction.additionalSections.length > 0) {
+    try {
+      const notes = extraction.additionalSections.map(section => ({
+        title: section.title,
+        text: section.content
+      }));
+      await mealieApi.addNotesToRecipe(slug, notes);
+    } catch (noteError) {
+      // Don't fail the whole import if notes fail
+      console.warn('Failed to add notes to recipe:', noteError);
+    }
+  }
+
   return { slug };
 }
 
@@ -408,39 +424,17 @@ function extractJsonLdRecipe() {
 
       if (recipe) {
         // Extract additional sections from the page (ATK, etc.)
+        let additionalSections = [];
         try {
-          const additionalSections = extractAdditionalSections();
-
-          // Add sections as recipe notes (Mealie uses notes array)
-          if (additionalSections && additionalSections.length > 0) {
-            // Initialize notes array if not present
-            if (!recipe.notes) {
-              recipe.notes = [];
-            } else if (!Array.isArray(recipe.notes)) {
-              recipe.notes = [recipe.notes];
-            }
-
-            // Add each section as a note
-            additionalSections.forEach(section => {
-              if (section.content) {
-                recipe.notes.push({
-                  '@type': 'CreativeWork',
-                  'text': `**${section.title}**\n\n${section.content}`
-                });
-              }
-            });
-
-            // Also prepend to description for redundancy
-            const originalDescription = recipe.description || '';
-            const enhancedDescription = buildEnhancedDescription(originalDescription, additionalSections);
-            recipe.description = enhancedDescription;
-          }
+          additionalSections = extractAdditionalSections();
         } catch (sectionError) {
           // If section extraction fails, continue with the recipe as-is
           console.debug('Additional section extraction failed:', sectionError);
         }
 
-        return { found: true, recipe };
+        // Return recipe and sections separately
+        // (Mealie ignores notes in JSON-LD, so we'll add them via PATCH after import)
+        return { found: true, recipe, additionalSections };
       }
     } catch (e) {
       // Continue to next script
