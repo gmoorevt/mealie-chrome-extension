@@ -359,6 +359,9 @@ async function importViaJsonLd() {
   });
 
   const extraction = results[0].result;
+  console.log('Extraction result:', extraction);
+  console.log('Additional sections found:', extraction.additionalSections);
+
   if (!extraction.found) {
     throw new Error('No recipe data found on this page');
   }
@@ -366,19 +369,25 @@ async function importViaJsonLd() {
   // Import the recipe first (without notes - Mealie ignores them in JSON-LD)
   const result = await mealieApi.importFromJson(extraction.recipe);
   const slug = typeof result === 'string' ? result.replace(/"/g, '') : result.slug || result;
+  console.log('Recipe imported with slug:', slug);
 
   // If we extracted additional sections, add them as notes via PATCH
   if (extraction.additionalSections && extraction.additionalSections.length > 0) {
+    console.log('Attempting to add notes:', extraction.additionalSections);
     try {
       const notes = extraction.additionalSections.map(section => ({
         title: section.title,
         text: section.content
       }));
-      await mealieApi.addNotesToRecipe(slug, notes);
+      console.log('Formatted notes for Mealie:', notes);
+      const patchResult = await mealieApi.addNotesToRecipe(slug, notes);
+      console.log('PATCH result:', patchResult);
     } catch (noteError) {
       // Don't fail the whole import if notes fail
-      console.warn('Failed to add notes to recipe:', noteError);
+      console.error('Failed to add notes to recipe:', noteError);
     }
+  } else {
+    console.log('No additional sections to add');
   }
 
   return { slug };
@@ -402,8 +411,120 @@ async function importViaHtml() {
 /**
  * Extract JSON-LD recipe data from page
  * Also extracts additional content sections for sites like ATK
+ * NOTE: This function is injected into the page, so all helpers must be inlined
  */
 function extractJsonLdRecipe() {
+  // Helper: Get text content following a header element
+  function getFollowingContent(headerElement) {
+    let content = [];
+    let sibling = headerElement.nextElementSibling;
+    let iterations = 0;
+    const maxIterations = 10;
+
+    // Check if header is inside a container with more content
+    const parent = headerElement.parentElement;
+    if (parent) {
+      const parentText = parent.textContent.trim();
+      const headerText = headerElement.textContent.trim();
+      if (parentText.length > headerText.length + 50) {
+        const remainingText = parentText.replace(headerText, '').trim();
+        if (remainingText.length > 50) {
+          return remainingText;
+        }
+      }
+    }
+
+    while (sibling && iterations < maxIterations) {
+      if (['H1', 'H2', 'H3', 'H4'].includes(sibling.tagName)) {
+        break;
+      }
+      const text = sibling.textContent.trim();
+      if (text) {
+        content.push(text);
+      }
+      sibling = sibling.nextElementSibling;
+      iterations++;
+    }
+
+    return content.join('\n\n');
+  }
+
+  // Helper: Extract ATK sections
+  function extractATKSections() {
+    const sections = [];
+    const domain = window.location.hostname;
+
+    if (!domain.includes('americastestkitchen.com') &&
+        !domain.includes('cooksillustrated.com') &&
+        !domain.includes('cookscountry.com')) {
+      return sections;
+    }
+
+    let whySection = null;
+    let beforeSection = null;
+
+    // Method 1: Look for headers and get following content
+    const allHeaders = document.querySelectorAll('h2, h3, h4, [role="heading"]');
+    allHeaders.forEach(header => {
+      const headerText = header.textContent.trim().toLowerCase();
+
+      if (!whySection && (headerText.includes('why this recipe works') || headerText.includes('why it works'))) {
+        const content = getFollowingContent(header);
+        if (content && content.length > 20) {
+          whySection = content;
+        }
+      }
+
+      if (!beforeSection && (headerText.includes('before you begin') || headerText.includes('getting started'))) {
+        const content = getFollowingContent(header);
+        if (content && content.length > 20) {
+          beforeSection = content;
+        }
+      }
+    });
+
+    // Method 2: ATK-specific class patterns
+    if (!beforeSection) {
+      const beforeElements = document.querySelectorAll(
+        '[class*="beforeYouBegin"], [class*="BeforeYouBegin"], [class*="before-you-begin"]'
+      );
+      beforeElements.forEach(el => {
+        if (!beforeSection) {
+          const text = el.textContent.trim();
+          if (text.length > 20 && text.length < 10000) {
+            beforeSection = text;
+          }
+        }
+      });
+    }
+
+    // Method 3: Generic class patterns for "why" sections
+    if (!whySection) {
+      const whyElements = document.querySelectorAll(
+        '[class*="WhyThis"], [class*="whyThis"], [class*="why-this"], [data-testid*="why"]'
+      );
+      whyElements.forEach(el => {
+        if (!whySection) {
+          const text = el.textContent.trim();
+          const cleanText = text.replace(/why this recipe works/i, '').trim();
+          if (cleanText.length > 20 && cleanText.length < 10000) {
+            whySection = cleanText;
+          }
+        }
+      });
+    }
+
+    if (whySection) {
+      sections.push({ title: 'Why This Recipe Works', content: whySection });
+    }
+    if (beforeSection) {
+      sections.push({ title: 'Before You Begin', content: beforeSection });
+    }
+
+    return sections;
+  }
+
+  // Main extraction logic
   const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
 
   for (const script of jsonLdScripts) {
@@ -426,23 +547,19 @@ function extractJsonLdRecipe() {
         // Extract additional sections from the page (ATK, etc.)
         let additionalSections = [];
         try {
-          additionalSections = extractAdditionalSections();
+          additionalSections = extractATKSections();
         } catch (sectionError) {
-          // If section extraction fails, continue with the recipe as-is
           console.debug('Additional section extraction failed:', sectionError);
         }
 
-        // Return recipe and sections separately
-        // (Mealie ignores notes in JSON-LD, so we'll add them via PATCH after import)
         return { found: true, recipe, additionalSections };
       }
     } catch (e) {
-      // Continue to next script
       console.debug('JSON-LD parse error:', e);
     }
   }
 
-  return { found: false };
+  return { found: false, additionalSections: [] };
 }
 
 /**
